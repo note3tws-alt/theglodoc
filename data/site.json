@@ -1,0 +1,30 @@
+{
+  "_readme": "Single source for every editable fact and statistic on the site, the media kit page and the media kit PDF. Run `python3 seo/build.py` after editing. Leave a value empty (\"\") to hide it everywhere. Only enter figures taken from current Instagram/YouTube insights, and update statsAsOf when you do.",
+  "name": "Dr. Athmika Prakash",
+  "brand": "THEGLODOC",
+  "email": "drathmika999@gmail.com",
+  "instagramHandle": "@the.glodoc",
+  "instagramUrl": "https://www.instagram.com/the.glodoc/",
+  "youtubeHandle": "@The.glodoc",
+  "youtubeUrl": "https://www.youtube.com/@The.glodoc",
+  "basedIn": "Kannur, Kerala, India",
+  "qualifications": ["BHMS (Bachelor of Homoeopathic Medicine and Surgery)", "FMC (Fellowship in Medical Cosmetology)", "Certified Consultant Medical Cosmetologist"],
+  "registration": "",
+  "contentLanguages": "",
+  "consultations": "4,000+",
+  "ga4Id": "",
+  "statsAsOf": "",
+  "stats": {
+    "instagramFollowers": "12.3K",
+    "youtubeSubscribers": "",
+    "avgReelViews": "",
+    "avgReach30d": "",
+    "engagementRate": "",
+    "audienceTopCountries": "",
+    "audienceTopCities": "",
+    "audienceAge": "",
+    "audienceGender": ""
+  },
+  "pastCollaborations": [],
+  "press": []
+}

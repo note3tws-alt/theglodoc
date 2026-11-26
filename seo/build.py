@@ -8,9 +8,12 @@ from PIL import Image, ImageDraw, ImageFont
 ROOT = 'https://theglodoc.in'
 TODAY = datetime.date.today().isoformat()
 OUT = 'site-seo'
-IG = 'https://www.instagram.com/the.glodoc/'
-YT = 'https://www.youtube.com/@The.glodoc'
-EMAIL = 'drathmika999@gmail.com'
+DATA = json.load(open('data/site.json', encoding='utf-8'))
+ST = DATA['stats']
+IG = DATA['instagramUrl']
+YT = DATA['youtubeUrl']
+EMAIL = DATA['email']
+GA4 = DATA.get('ga4Id', '').strip()
 OG_IMG = ROOT + '/images/og-dr-athmika-prakash-theglodoc.jpg'
 
 src = open('backup/site/index.html', encoding='utf-8').read()
@@ -50,7 +53,10 @@ d.text((70, 500), "Women's health · Gut health · Skin and hair", font=ImageFon
 bg.save(f'{OUT}/images/og-dr-athmika-prakash-theglodoc.jpg', quality=85, optimize=True)
 for f in ['favicon.svg', 'favicon.png', 'apple-touch-icon.png']:
     shutil.copy('icons/' + f, f'{OUT}/{f}')
-shutil.copy('site/config.js', f'{OUT}/config.js')
+# config.js is generated from data/site.json so the site, media kit and PDF share one source
+_cfg = {k: DATA[k] for k in ['instagramHandle', 'instagramUrl', 'youtubeUrl', 'youtubeHandle', 'consultations', 'email', 'ga4Id']}
+_cfg.update({k: v for k, v in ST.items()})
+open(f'{OUT}/config.js', 'w', encoding='utf-8').write('/* Generated from data/site.json by seo/build.py. Edit data/site.json, not this file. */\nwindow.SITE = ' + json.dumps(_cfg, ensure_ascii=False, indent=2) + ';\n')
 
 # ---------- css / js ----------
 css = re.search(r'<style>\n/\* Layout.*?</style>', src, re.S).group(0)[len('<style>\n'):-len('</style>')]
@@ -100,6 +106,26 @@ body{margin:0}[hidden]{display:none!important}
 .contact-grid>*{min-width:0}
 .contact-list{display:flex;flex-direction:column;gap:14px;font-size:17px}
 .contact-list a{overflow-wrap:anywhere}
+.small{font-size:14px;color:var(--muted)}
+.prose .fact-list{display:grid;padding:0}
+.prose .lede{max-width:62ch}
+.enq-form label span{opacity:1}
+.kv li strong{font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kv li span{display:block;font-size:19px;color:var(--ink);margin-top:6px}
+.kv a{border-bottom:1px solid currentColor;text-decoration:none}
+.steps{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:10px}
+.faqs{display:flex;flex-direction:column;gap:10px}
+.faq{background:var(--sage-50);border-radius:14px;padding:16px 20px}
+.faq summary{cursor:pointer;font-size:19px}
+.faq p{margin-top:10px;color:var(--muted)}
+.enq-form .check label{font-size:15px;color:var(--ink);display:flex;gap:10px;align-items:flex-start}
+.enq-form .check input{width:auto;margin-top:4px}
+.top .nav{gap:22px}
+@media (max-width:1100px){.top .nav a:not(.btn){font-size:15px}}
+@media (max-width:980px){
+  .menu{display:block}
+  .top .nav{display:none}
+}
 @media (max-width:820px){
   .menu{display:block}
   .top .nav{display:none}
@@ -112,6 +138,24 @@ open(f'{OUT}/styles.css', 'w', encoding='utf-8').write(css)
 
 js = re.search(r'<script>\n\(function\(\)\{\n  var S=window\.SITE.*?</script>', src, re.S).group(0)[len('<script>\n'):-len('</script>')]
 js += """
+/* Analytics: GA4 loads only when data/site.json has a ga4Id. Events are pushed to dataLayer either way. */
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+function track(name,params){try{gtag("event",name,params||{});}catch(e){}}
+(function(){
+  var id=(window.SITE||{}).ga4Id;
+  if(id){var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id="+encodeURIComponent(id);document.head.appendChild(s);
+    gtag("js",new Date());gtag("config",id);}
+  document.addEventListener("click",function(e){
+    var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href")||"";
+    if(h.indexOf("mailto:")===0)track("email_click",{link_url:h});
+    else if(/instagram\\.com/.test(h))track("instagram_click",{link_url:h});
+    else if(/youtube\\.com|youtu\\.be/.test(h))track("youtube_click",{link_url:h});
+    else if(/wa\\.me|whatsapp/.test(h))track("whatsapp_click",{link_url:h});
+    else if(/\\.pdf($|\\?)/.test(h))track("file_download",{file_name:h.split("/").pop(),link_url:h,content_type:"media_kit"});
+    if(a.closest(".vid"))track("portfolio_video_click",{link_url:h});
+  });
+})();
 (function(){
   document.querySelectorAll("form.enq-form").forEach(function(form){
     var btn=form.querySelector("button[type=submit]"),st=form.querySelector(".enq-status"),label=btn.textContent;
@@ -121,7 +165,8 @@ js += """
       if(!window.GLODOC_LIVE){st.textContent="Preview only. Enquiries are sent from the live website.";return;}
       btn.disabled=true;btn.textContent="Sending...";st.textContent="";
       fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(new FormData(form)).toString()})
-      .then(function(r){if(!r.ok)throw new Error(r.status);form.reset();st.textContent="Thank you. Your message has been sent and the team will be in touch.";})
+      .then(function(r){if(!r.ok)throw new Error(r.status);form.reset();st.textContent=form.getAttribute("data-ok")||"Thank you. Your message has been sent and the team will be in touch.";
+        track("generate_lead",{form_name:form.getAttribute("name")});if(form.getAttribute("name")==="partnership")track("partnership_enquiry",{form_name:"partnership"});})
       .catch(function(){st.className="enq-status err";st.textContent="Your message didn't send. Please try again, or message "+((window.SITE&&SITE.instagramHandle)||"@the.glodoc")+" on Instagram.";})
       .then(function(){btn.disabled=false;btn.textContent=label;});
     });
@@ -133,7 +178,7 @@ open(f'{OUT}/app.js', 'w', encoding='utf-8').write(js)
 # ---------- shared fragments ----------
 LOGO = '<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="#4a5c4b"/><path fill="#ffffff" d="M16 5c.7 6.6 3.7 9.6 11 11-7.3 1.4-10.3 4.4-11 11-.7-6.6-3.7-9.6-11-11 7.3-1.4 10.3-4.4 11-11z"/></svg>'
 NAV = [('/about/', 'About'), ('/consultations/', 'Consultations'), ('/health-education/', 'Health education'),
-       ('/videos/', 'Videos'), ('/partnerships/', 'Partnerships'), ('/contact/', 'Contact')]
+       ('/videos/', 'Videos'), ('/brand-partnerships/', 'Partnerships'), ('/media-kit/', 'Media kit'), ('/contact/', 'Contact')]
 def header():
     links = ''.join(f'<a href="{h}">{t}</a>' for h, t in NAV)
     return (f'<div class="top"><div class="wrap"><a class="logo" href="/" aria-label="THEGLODOC home">{LOGO}<span>THEGLODOC</span></a>'
@@ -148,7 +193,8 @@ FOOT = f'''<footer><div class="wrap">
 <p class="foot-email">Instagram <a class="link" href="{IG}" data-site-href="instagramUrl" target="_blank" rel="noopener"><span data-site="instagramHandle">@the.glodoc</span></a></p></div>
 <div class="foot-cols">
 <div><h2>Learn</h2><ul><li><a href="/womens-health/">Women's health</a></li><li><a href="/gut-health/">Gut and everyday health</a></li><li><a href="/skin-and-hair/">Skin and hair</a></li><li><a href="/medical-cosmetology/">Medical cosmetology</a></li><li><a href="/videos/">Videos</a></li></ul></div>
-<div><h2>Work with her</h2><ul><li><a href="/consultations/">Consultations</a></li><li><a href="/partnerships/">Partnerships</a></li><li><a href="/contact/">Contact</a></li><li><a href="/about/">About</a></li></ul></div>
+<div><h2>Work with her</h2><ul><li><a href="/brand-partnerships/">Brand partnerships</a></li><li><a href="/media-kit/">Media kit</a></li><li><a href="/consultations/">Consultations</a></li><li><a href="/contact/">Contact</a></li><li><a href="/about/">About</a></li></ul></div>
+<div><h2>Trust</h2><ul><li><a href="/editorial-policy/">Editorial policy</a></li><li><a href="/medical-disclaimer/">Medical disclaimer</a></li><li><a href="/privacy-policy/">Privacy policy</a></li><li><a href="/terms/">Terms of use</a></li></ul></div>
 </div>
 <div class="fine"><span>Content is for general education and does not replace a medical consultation. In an emergency, contact your nearest hospital.</span><span>© 2026 THEGLODOC</span></div>
 </div></footer>'''
@@ -165,6 +211,9 @@ person = {
  'address': {'@type': 'PostalAddress', 'addressLocality': 'Kannur', 'addressRegion': 'Kerala', 'addressCountry': 'IN'},
  'knowsAbout': ["Women's health", 'Gut health', 'Hormonal health', 'Skin health', 'Hair health', 'Medical cosmetology', 'Health education'],
  'sameAs': [IG, YT],
+ 'hasCredential': [{'@type': 'EducationalOccupationalCredential', 'credentialCategory': 'degree', 'name': 'Bachelor of Homoeopathic Medicine and Surgery (BHMS)'},
+                   {'@type': 'EducationalOccupationalCredential', 'credentialCategory': 'certificate', 'name': 'Fellowship in Medical Cosmetology (FMC)'},
+                   {'@type': 'EducationalOccupationalCredential', 'credentialCategory': 'certificate', 'name': 'Certified Consultant Medical Cosmetologist'}],
 }
 org = {'@type': 'Organization', '@id': ORG_ID, 'name': 'THEGLODOC', 'url': ROOT + '/', 'logo': ROOT + '/favicon.png',
        'founder': {'@id': PERSON_ID}, 'email': EMAIL, 'sameAs': [IG, YT]}
@@ -314,12 +363,31 @@ body = re.sub(r'<img src="images/video-(\d)\.jpg"[^>]*>', vid_swap, body)
 body = body.replace('<h2>Featured videos.</h2>', '<h2>Featured videos.</h2>')
 body = body.replace('<a class="link" href="https://www.youtube.com/@The.glodoc" data-site-href="youtubeUrl" target="_blank" rel="noopener">More on YouTube</a>\n    </div>',
                     '<a class="link" href="/videos/">All videos</a>\n    </div>', 1)
-body = body.replace('<a class="btn ghost" href="#enquiry">Send an enquiry</a>', '<a class="btn ghost" href="#enquiry">Send an enquiry</a> <a class="link" href="/partnerships/">Partnership details</a>')
+for _o, _n in [('<p class="lede">For health, wellness, skincare and haircare brands. Rates on request.</p>', '<p class="lede">Doctor-led health education for hospitals, health-tech, wellness brands and agencies. Every partnership is reviewed and disclosed.</p>'),
+               ('<div><h3>Instagram Reels</h3><p>A short video explaining what the product does and who it suits.</p></div>', '<div><h3>Awareness campaigns</h3><p>Clear videos on a health topic, screening or habit, for hospitals and public health.</p></div>'),
+               ('<div><h3>Stories</h3><p>A Story set with a link, for launches and offers.</p></div>', '<div><h3>Education series</h3><p>A multi-part series when a topic needs more than one Reel.</p></div>'),
+               ('<div><h3>Series</h3><p>Several videos for products that need more explanation.</p></div>', '<div><h3>Talks and interviews</h3><p>Podcasts, panels, Lives and workshops on everyday health.</p></div>')]:
+    assert _o in body, _o
+    body = body.replace(_o, _n)
+body = body.replace('<a class="btn ghost" href="#enquiry">Send an enquiry</a>', '<a class="btn ghost" href="/brand-partnerships/#enquiry">Send a partnership enquiry</a> <a class="link" href="/media-kit/">View the media kit</a>')
 body = body.replace('<a class="btn" href="https://www.instagram.com/the.glodoc/" data-site-href="instagramUrl" target="_blank" rel="noopener">Follow on Instagram</a>\n        <div class="ig-count">',
                     '<a class="btn" href="https://www.instagram.com/the.glodoc/" data-site-href="instagramUrl" target="_blank" rel="noopener">Follow on Instagram</a>\n        <div class="ig-count">')
 body = body.replace('<h2>Available for online and offline consultations.</h2>', '<h2>Available for online and offline consultations.</h2>\n      <p><a class="link" href="/consultations/">How consultations work</a></p>', 1)
 # form: replace id-based single form with class-based (names kept)
 body = body.replace('id="partnership-form" ', '')
+# homepage quick form gets its own Netlify form name (the full form on /brand-partnerships/ is "partnership")
+for _o, _n in [('name="partnership" method="POST"', 'name="partnership-quick" method="POST" data-ok="Thank you. Your enquiry has been received. The team will reply by email."'),
+               ('<input type="hidden" name="form-name" value="partnership">', '<input type="hidden" name="form-name" value="partnership-quick">'),
+               ('<p class="lede">Tell us about your brand and campaign.</p>', '<p class="lede">Tell us about your organisation and campaign. For a detailed brief, use the <a class="link" href="/brand-partnerships/#enquiry">full partnership form</a>. Patients, please use the <a class="link" href="/contact/">contact page</a>.</p>'),
+               ('<label for="f-type">Type of partnership</label>', '<label for="f-type">Type of enquiry</label>'),
+               ('<option>Instagram Reel</option>\n          <option>Instagram Stories</option>\n          <option>Content series</option>\n          <option>Event or appearance</option>\n          <option>Something else</option>',
+                '<option>Health awareness campaign</option>\n          <option>Health education content</option>\n          <option>Podcast or interview invitation</option>\n          <option>Event or speaking invitation</option>\n          <option>Product education (wellness, skincare, haircare)</option>\n          <option>Other</option>'),
+               ('<option value="">Prefer not to say</option>\n          <option>Under ₹25,000</option>\n          <option>₹25,000 to ₹75,000</option>\n          <option>₹75,000 to ₹2,00,000</option>\n          <option>Above ₹2,00,000</option>',
+                '<option value="">Prefer to discuss</option>\n          <option>Under ₹50,000</option>\n          <option>₹50,000 to ₹1,50,000</option>\n          <option>₹1,50,000 to ₹5,00,000</option>\n          <option>Above ₹5,00,000</option>\n          <option>AED budget (discuss)</option>'),
+               ('<label for="f-msg">About the product and campaign</label>', '<label for="f-msg">About the campaign</label>'),
+               ('placeholder="Product, key message, timeline and anything else she should know."', 'placeholder="Objectives, audience, deliverables and timeline."')]:
+    assert _o in body, _o
+    body = body.replace(_o, _n)
 body = body.replace('<button class="btn" id="f-submit" type="submit">', '<button class="btn" type="submit">').replace('<p class="enq-status" id="f-status"', '<p class="enq-status"')
 body = re.sub(r'<footer>.*?</footer>', FOOT, body, flags=re.S)
 body = body.replace('<main>', '<main>')
@@ -338,13 +406,13 @@ about_body = f'''<section><div class="wrap tight"><div class="prose">
 <p>Dr. Athmika Prakash is a doctor, certified consultant medical cosmetologist and health educator based in Kannur, Kerala. She shares clear, everyday health education through short videos on Instagram and YouTube under the name THEGLODOC.</p>
 <p>Her work focuses on questions people ask every day: women's health, gut and general health, skin and hair, and what medical cosmetology procedures involve and who they suit.</p>
 <h2>Qualifications</h2>
-<ul><li><strong>BHMS</strong>, Bachelor of Homoeopathic Medicine and Surgery</li><li><strong>Certified Consultant Medical Cosmetologist</strong></li></ul>
+<ul><li><strong>BHMS</strong>, Bachelor of Homoeopathic Medicine and Surgery</li><li><strong>FMC</strong>, Fellowship in Medical Cosmetology</li><li><strong>Certified Consultant Medical Cosmetologist</strong></li></ul>
 <h2>Experience</h2>
 <ul><li><strong>4,000+</strong> patient consultations completed, online and offline</li><li>Health educator and content creator on <a href="{IG}" target="_blank" rel="noopener" data-site-href="instagramUrl">Instagram</a> (<span data-site="instagramFollowers">12.3K</span> followers) and <a href="{YT}" target="_blank" rel="noopener" data-site-href="youtubeUrl">YouTube</a></li></ul>
 <h2>What she covers</h2>
 <ul><li><a href="/womens-health/">Women's health</a>: periods, hormones, checkups and pregnancy myths</li><li><a href="/gut-health/">Gut and everyday health</a>: digestion, routine tests and common deficiencies</li><li><a href="/skin-and-hair/">Skin and hair</a>: common concerns, myths and what to ask a doctor</li><li><a href="/medical-cosmetology/">Medical cosmetology</a>: what procedures are and who they suit</li></ul>
 <h2>Work with her</h2>
-<p>Patients can <a href="/consultations/">enquire about a consultation</a>. Health, wellness, skincare and haircare brands can read about <a href="/partnerships/">partnerships</a>. Everyone can <a href="/videos/">watch her videos</a> or follow along on Instagram.</p>
+<p>Patients can <a href="/consultations/">enquire about a consultation</a>. Hospitals, health brands and agencies can read about <a href="/brand-partnerships/">brand partnerships</a> or see the <a href="/media-kit/">media kit</a>. Everyone can <a href="/videos/">watch her videos</a> or follow along on Instagram.</p>
 {DISC}
 </div></div></section>
 {cta_band('Questions about a consultation or collaboration?', '/contact/', 'Contact')}'''
@@ -442,23 +510,8 @@ write('/videos/', 'Health Videos by Dr. Athmika Prakash | YouTube Shorts',
       'Watch short health videos by Dr. Athmika Prakash on women\'s health, health checks, skin and everyday wellness. Follow THEGLODOC on YouTube and Instagram.',
       page_hero('Health videos', 'Short, clear videos by Dr. Athmika on everyday health, women\'s health and skin.', t), v_body, t, kind='CollectionPage')
 
-# ================= PARTNERSHIPS =================
-t = [('Home', '/'), ('Partnerships', '/partnerships/')]
-p_body = f'''<section><div class="wrap tight"><div class="prose">
-<p>THEGLODOC is a doctor-led health education brand. Dr. Athmika partners with health, wellness, skincare and haircare brands to explain what a product does and who it suits, in her own voice.</p>
-<ul class="fact-list" style="max-width:none"><li><strong data-site="instagramFollowers">12.3K</strong><span>Instagram followers</span></li><li><strong data-site="consultations">4,000+</strong><span>patient consultations</span></li></ul>
-<h2>Content formats</h2>
-<ul><li><strong>Instagram Reels:</strong> a short video explaining what the product does and who it suits.</li><li><strong>Stories:</strong> a Story set with a link, for launches and offers.</li><li><strong>Series:</strong> several videos for products that need more explanation.</li></ul>
-<h2>Where the content appears</h2>
-<p><a href="{IG}" target="_blank" rel="noopener" data-site-href="instagramUrl">Instagram @the.glodoc</a> and <a href="{YT}" target="_blank" rel="noopener" data-site-href="youtubeUrl">YouTube @The.glodoc</a>.</p>
-<h2>How a partnership works</h2>
-<p>Because this is health content, product details and claims are reviewed with the brand before anything is published. Rates are shared on request.</p>
-</div></div></section>
-<section class="tint" id="enquiry"><div class="wrap tight enq"><div class="enq-intro"><h2>Send a partnership enquiry</h2><p class="lede">Tell us about your brand and campaign. Or write to <a class="link" href="mailto:{EMAIL}" data-site="email" data-site-mailto="email">{EMAIL}</a>.</p></div>
-{form('partnership', 'partnership')}</div></section>'''
-write('/partnerships/', 'Brand Collaborations with Doctor Creator | THEGLODOC',
-      'Partner with Dr. Athmika Prakash (THEGLODOC), a doctor and health creator, for health, wellness, skincare and haircare campaigns on Instagram and YouTube.',
-      page_hero('Partner with THEGLODOC', 'For health, wellness, skincare and haircare brands. Rates on request.', t), p_body, t)
+# ================= GROWTH PAGES (brand partnerships, media kit, trust pages) =================
+exec(open('seo/pages_growth.py', encoding='utf-8').read())
 
 # ================= CONTACT =================
 t = [('Home', '/'), ('Contact', '/contact/')]
@@ -483,8 +536,9 @@ nf += header() + '''<header class="phero"><div class="wrap"><h1>This page could 
 open(OUT + '/404.html', 'w', encoding='utf-8').write(nf)
 
 # ================= robots / sitemap / headers / redirects =================
-pages = ['/', '/about/', '/consultations/', '/health-education/', '/womens-health/', '/gut-health/', '/skin-and-hair/', '/medical-cosmetology/', '/videos/', '/partnerships/', '/contact/']
-pri = {'/': '1.0', '/about/': '0.8', '/consultations/': '0.9', '/partnerships/': '0.8', '/contact/': '0.6'}
+pages = ['/', '/about/', '/consultations/', '/health-education/', '/womens-health/', '/gut-health/', '/skin-and-hair/', '/medical-cosmetology/', '/videos/', '/brand-partnerships/', '/media-kit/', '/contact/',
+         '/editorial-policy/', '/medical-disclaimer/', '/privacy-policy/', '/terms/']
+pri = {'/': '1.0', '/about/': '0.8', '/consultations/': '0.9', '/brand-partnerships/': '0.9', '/contact/': '0.6'}
 sm = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
 for u in pages:
     sm += f'  <url>\n    <loc>{ROOT}{u}</loc>\n    <lastmod>{TODAY}</lastmod>\n  </url>\n'
@@ -501,12 +555,20 @@ open(OUT + '/_headers', 'w').write('''/*
 /favicon.*
   Cache-Control: public, max-age=2592000
 ''')
-open(OUT + '/_redirects', 'w').write('/index.html  /  301\n/home  /  301\n')
+open(OUT + '/_redirects', 'w').write('/index.html  /  301\n/home  /  301\n/partnerships  /brand-partnerships/  301\n/partnerships/  /brand-partnerships/  301\n/collaborations/  /brand-partnerships/  301\n/mediakit/  /media-kit/  301\n')
+
+# ================= media kit PDF =================
+import subprocess
+os.makedirs(OUT + '/media-kit', exist_ok=True)
+r = subprocess.run(['node', 'seo/pdf.js', 'build/media-kit-print.html', OUT + '/media-kit/theglodoc-media-kit.pdf'], capture_output=True, text=True)
+print('media kit PDF:', r.stdout.strip() or r.stderr.strip())
+assert os.path.exists(OUT + '/media-kit/theglodoc-media-kit.pdf'), 'PDF not generated; needs node + playwright'
+open(OUT + '/_headers', 'a').write('/media-kit/*.pdf\n  Cache-Control: public, max-age=86400\n')
 
 # ================= zip =================
-if os.path.exists('glodoc-seo-deploy.zip'): os.remove('glodoc-seo-deploy.zip')
-with zipfile.ZipFile('glodoc-seo-deploy.zip', 'w', zipfile.ZIP_DEFLATED) as z:
+if os.path.exists('deploy-packages/glodoc-seo-deploy.zip'): os.remove('deploy-packages/glodoc-seo-deploy.zip')
+with zipfile.ZipFile('deploy-packages/glodoc-seo-deploy.zip', 'w', zipfile.ZIP_DEFLATED) as z:
     for r, _, fs in os.walk(OUT):
         for f in fs:
             full = os.path.join(r, f); z.write(full, os.path.relpath(full, OUT))
-print(sorted((i.filename, i.file_size) for i in zipfile.ZipFile('glodoc-seo-deploy.zip').infolist()))
+print(sorted((i.filename, i.file_size) for i in zipfile.ZipFile('deploy-packages/glodoc-seo-deploy.zip').infolist()))
