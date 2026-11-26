@@ -194,7 +194,7 @@ p,li{{font-size:10.5pt;line-height:1.5;margin:0 0 2mm}}ul{{margin:0;padding-left
 .cols{{display:grid;grid-template-columns:1fr 1fr;gap:10mm}}
 </style></head><body>
 <section class="pg cover"><div><p class="ey">THEGLODOC · Media kit</p><h1>Dr. Athmika Prakash</h1>
-<p style="font-size:13pt">Doctor (BHMS) · Certified Consultant Medical Cosmetologist · Health educator</p>
+<p style="font-size:13pt">Doctor (BHMS, FMC) · Certified Consultant Medical Cosmetologist · Health educator</p>
 <p>{html.escape(DATA["basedIn"])}</p><p style="margin-top:8mm">{POSITIONING}</p></div>
 <img src="file://{here}/photos/portrait.jpg" alt=""></section>
 <section class="pg"><p class="ey">Reach and audience</p><h2>Reach</h2><div class="stats">{stat_print}</div>

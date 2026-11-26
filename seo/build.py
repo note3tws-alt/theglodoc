@@ -212,6 +212,7 @@ person = {
  'knowsAbout': ["Women's health", 'Gut health', 'Hormonal health', 'Skin health', 'Hair health', 'Medical cosmetology', 'Health education'],
  'sameAs': [IG, YT],
  'hasCredential': [{'@type': 'EducationalOccupationalCredential', 'credentialCategory': 'degree', 'name': 'Bachelor of Homoeopathic Medicine and Surgery (BHMS)'},
+                   {'@type': 'EducationalOccupationalCredential', 'credentialCategory': 'certificate', 'name': 'Fellowship in Medical Cosmetology (FMC)'},
                    {'@type': 'EducationalOccupationalCredential', 'credentialCategory': 'certificate', 'name': 'Certified Consultant Medical Cosmetologist'}],
 }
 org = {'@type': 'Organization', '@id': ORG_ID, 'name': 'THEGLODOC', 'url': ROOT + '/', 'logo': ROOT + '/favicon.png',
@@ -405,7 +406,7 @@ about_body = f'''<section><div class="wrap tight"><div class="prose">
 <p>Dr. Athmika Prakash is a doctor, certified consultant medical cosmetologist and health educator based in Kannur, Kerala. She shares clear, everyday health education through short videos on Instagram and YouTube under the name THEGLODOC.</p>
 <p>Her work focuses on questions people ask every day: women's health, gut and general health, skin and hair, and what medical cosmetology procedures involve and who they suit.</p>
 <h2>Qualifications</h2>
-<ul><li><strong>BHMS</strong>, Bachelor of Homoeopathic Medicine and Surgery</li><li><strong>Certified Consultant Medical Cosmetologist</strong></li></ul>
+<ul><li><strong>BHMS</strong>, Bachelor of Homoeopathic Medicine and Surgery</li><li><strong>FMC</strong>, Fellowship in Medical Cosmetology</li><li><strong>Certified Consultant Medical Cosmetologist</strong></li></ul>
 <h2>Experience</h2>
 <ul><li><strong>4,000+</strong> patient consultations completed, online and offline</li><li>Health educator and content creator on <a href="{IG}" target="_blank" rel="noopener" data-site-href="instagramUrl">Instagram</a> (<span data-site="instagramFollowers">12.3K</span> followers) and <a href="{YT}" target="_blank" rel="noopener" data-site-href="youtubeUrl">YouTube</a></li></ul>
 <h2>What she covers</h2>

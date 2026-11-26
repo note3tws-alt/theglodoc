@@ -30,7 +30,7 @@ Prepared 26 Nov 2026 for theglodoc.in (Dr. Athmika Prakash). It builds on `repor
 ## 2. What the research found about the brand
 | Item | Finding | Source / status |
 |---|---|---|
-| Identity | Dr. Athmika Prakash. BHMS (Bachelor of Homoeopathic Medicine and Surgery). Certified Consultant Medical Cosmetologist. Kannur, Kerala | Existing site and handoff; the certifying body is not confirmed |
+| Identity | Dr. Athmika Prakash. BHMS (Bachelor of Homoeopathic Medicine and Surgery). FMC (Fellowship in Medical Cosmetology). Certified Consultant Medical Cosmetologist. Kannur, Kerala | FMC confirmed by client 26 Nov 2026; the issuing body is not confirmed |
 | Type of doctor | **Homoeopathic doctor (BHMS)**, not an MBBS physician or a specialist. Her regulator is the **National Commission for Homoeopathy (NCH)**, not the NMC | Inferred from the BHMS degree. Confirm her registration (State Board / NCH register) |
 | Content | Short videos on women's health, everyday and gut health, skin and hair, and medical cosmetology. Five YouTube Shorts are linked on the site | Existing site |
 | Platforms | Instagram @the.glodoc (12.3K followers, per the handoff); YouTube @The.glodoc | Follower count is not re-verified (Instagram cannot be fetched from here) |
@@ -205,7 +205,7 @@ The only accessibility issue was low contrast on the "(optional)" form labels. I
 
 **Items for you to decide or confirm**
 - **Hero line: "People's most viewed and favourite health influencer."** This is an unsubstantiated superlative. ASCI, the NMC-style rules and the DHA standard all treat this kind of claim as risky. **Recommend replacing it** with a measurable line. It has been left unchanged because it was your earlier request.
-- **"FMC" in the hero credential line.** Its meaning is unknown, so it should be explained or removed.
+- **"FMC" = Fellowship in Medical Cosmetology** (confirmed 26 Nov). Now spelled out on the About page, the media kit and in schema. Still needed: the issuing body.
 - **Is Dr. Athmika willing to do product education at all?** If not, remove that format from `seo/pages_growth.py`.
 - **Medical cosmetology procedures.** A homoeopath performing aesthetic procedures may be restricted in some states. Confirm what she actually performs, versus explains, before any procedure-related partnership.
 
@@ -239,7 +239,7 @@ The only accessibility issue was low contrast on the "(optional)" form labels. I
    - age and gender split
 2. **YouTube subscribers.**
 3. **Content languages**, e.g. Malayalam and English.
-4. **Registration details:** council, number, and whether to show them. Also what "FMC" stands for, and the certifying body for the cosmetology certificate.
+4. **Registration details:** council, number, and whether to show them. Also the issuing body for the FMC and the cosmetology certificate.
 5. **Past brand collaborations, talks and campaigns** she is happy to list, and any **press or interviews**.
 6. **Whether she does product education at all**, and any categories she refuses.
 7. **GA4 Measurement ID.**
@@ -285,7 +285,7 @@ The only accessibility issue was low contrast on the "(optional)" form labels. I
 4. Decide on a Malayalam section and on a UAE page using real audience data.
 
 ## 14. Prioritised next actions
-1. Review and approve the compliance items in section 9, especially the hero superlative and "FMC".
+1. Review and approve the compliance items in section 9, especially the hero superlative.
 2. Deploy `deploy-packages/glodoc-seo-deploy.zip` to Netlify.
 3. Turn on Netlify form email notifications.
 4. Search Console: submit the sitemap and request indexing.
