@@ -29,6 +29,24 @@
   });
 })();
 
+/* Analytics: GA4 loads only when data/site.json has a ga4Id. Events are pushed to dataLayer either way. */
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+function track(name,params){try{gtag("event",name,params||{});}catch(e){}}
+(function(){
+  var id=(window.SITE||{}).ga4Id;
+  if(id){var s=document.createElement("script");s.async=true;s.src="https://www.googletagmanager.com/gtag/js?id="+encodeURIComponent(id);document.head.appendChild(s);
+    gtag("js",new Date());gtag("config",id);}
+  document.addEventListener("click",function(e){
+    var a=e.target.closest&&e.target.closest("a[href]");if(!a)return;var h=a.getAttribute("href")||"";
+    if(h.indexOf("mailto:")===0)track("email_click",{link_url:h});
+    else if(/instagram\.com/.test(h))track("instagram_click",{link_url:h});
+    else if(/youtube\.com|youtu\.be/.test(h))track("youtube_click",{link_url:h});
+    else if(/wa\.me|whatsapp/.test(h))track("whatsapp_click",{link_url:h});
+    else if(/\.pdf($|\?)/.test(h))track("file_download",{file_name:h.split("/").pop(),link_url:h,content_type:"media_kit"});
+    if(a.closest(".vid"))track("portfolio_video_click",{link_url:h});
+  });
+})();
 (function(){
   document.querySelectorAll("form.enq-form").forEach(function(form){
     var btn=form.querySelector("button[type=submit]"),st=form.querySelector(".enq-status"),label=btn.textContent;
@@ -38,7 +56,8 @@
       if(!window.GLODOC_LIVE){st.textContent="Preview only. Enquiries are sent from the live website.";return;}
       btn.disabled=true;btn.textContent="Sending...";st.textContent="";
       fetch("/",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(new FormData(form)).toString()})
-      .then(function(r){if(!r.ok)throw new Error(r.status);form.reset();st.textContent="Thank you. Your message has been sent and the team will be in touch.";})
+      .then(function(r){if(!r.ok)throw new Error(r.status);form.reset();st.textContent=form.getAttribute("data-ok")||"Thank you. Your message has been sent and the team will be in touch.";
+        track("generate_lead",{form_name:form.getAttribute("name")});if(form.getAttribute("name")==="partnership")track("partnership_enquiry",{form_name:"partnership"});})
       .catch(function(){st.className="enq-status err";st.textContent="Your message didn't send. Please try again, or message "+((window.SITE&&SITE.instagramHandle)||"@the.glodoc")+" on Instagram.";})
       .then(function(){btn.disabled=false;btn.textContent=label;});
     });

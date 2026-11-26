@@ -1,12 +1,12 @@
 const {chromium}=require('playwright');const http=require('http');const fs=require('fs');const path=require('path');
 const root=path.resolve('site-seo');
-const types={'.html':'text/html','.css':'text/css','.js':'text/javascript','.jpg':'image/jpeg','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.xml':'text/xml','.txt':'text/plain'};
+const types={'.html':'text/html','.css':'text/css','.js':'text/javascript','.jpg':'image/jpeg','.webp':'image/webp','.png':'image/png','.svg':'image/svg+xml','.xml':'text/xml','.txt':'text/plain','.pdf':'application/pdf'};
 const srv=http.createServer((q,r)=>{let u=decodeURIComponent(q.url.split('?')[0]);let f=path.join(root,u);
  if(fs.existsSync(f)&&fs.statSync(f).isDirectory())f=path.join(f,'index.html');
  if(!fs.existsSync(f)){r.writeHead(404,{'content-type':'text/html'});return r.end(fs.readFileSync(path.join(root,'404.html')));}
  r.writeHead(200,{'content-type':types[path.extname(f)]||'application/octet-stream'});r.end(fs.readFileSync(f));});
 (async()=>{await new Promise(r=>srv.listen(8099,r));
-const b=await chromium.launch();const pages=['/','/about/','/consultations/','/health-education/','/womens-health/','/gut-health/','/skin-and-hair/','/medical-cosmetology/','/videos/','/partnerships/','/contact/','/nope'];
+const b=await chromium.launch();const pages=['/','/about/','/consultations/','/health-education/','/womens-health/','/gut-health/','/skin-and-hair/','/medical-cosmetology/','/videos/','/brand-partnerships/','/media-kit/','/contact/','/editorial-policy/','/medical-disclaimer/','/privacy-policy/','/terms/','/nope'];
 const bad=[];const seen=new Set();
 for(const vp of [{width:1280,height:800},{width:390,height:800}]){
  const ctx=await b.newContext({viewport:vp});
@@ -28,6 +28,17 @@ const ctx=await b.newContext();for(const l of seen){const r=await ctx.request.ge
 const pg=await ctx.newPage();let posted=null;await pg.route('**/',r=>{if(r.request().method()==='POST'){posted=r.request().postData();r.fulfill({status:200,body:'ok'})}else r.continue()});
 await pg.goto('http://localhost:8099/contact/');await pg.fill('#c-name','Test');await pg.fill('#c-email','a@b.co');await pg.selectOption('#c-reason','A brand partnership');await pg.fill('#c-msg','hello');await pg.click('button[type=submit]');await pg.waitForTimeout(600);
 console.log('form posted:',posted);console.log('status:',await pg.textContent('.enq-status'));
+// partnership form
+const pp=await ctx.newPage();let pposted=null;await pp.route('**/',r=>{if(r.request().method()==='POST'){pposted=r.request().postData();r.fulfill({status:200,body:'ok'})}else r.continue()});
+await pp.goto('http://localhost:8099/brand-partnerships/');
+for(const [sel,v] of [['#p-company','Acme Health'],['#p-name','Test'],['#p-email','a@b.co'],['#p-website','https://acme.example'],['#p-country','UAE'],['#p-goals','Awareness'],['#p-audience','Women 25-40'],['#p-deliv','2 Reels'],['#p-time','March']])await pp.fill(sel,v);
+await pp.selectOption('#p-industry','Hospital or clinic');await pp.selectOption('#p-type','Health awareness campaign');
+await pp.click('button[type=submit]');await pp.waitForTimeout(300);if(pposted)bad.push('partnership form posted without consent checkbox');
+await pp.check('input[name=standards_ack]');await pp.click('button[type=submit]');await pp.waitForTimeout(600);
+console.log('partnership posted:',pposted);console.log('status:',await pp.textContent('.enq-status'));
+const dl=await ctx.request.get('http://localhost:8099/media-kit/theglodoc-media-kit.pdf');console.log('pdf:',dl.status(),(await dl.body()).length,'bytes');
+// analytics events
+const ev=await pp.evaluate(()=>window.dataLayer.map(a=>a[1]).filter(Boolean));console.log('events:',ev.join(','));
 // mobile menu
 const m=await b.newContext({viewport:{width:390,height:800}});const mp=await m.newPage();await mp.goto('http://localhost:8099/about/');await mp.click('.menu summary');console.log('menu links visible:',await mp.locator('.menu nav a:visible').count());
 // homepage animation hooks still present
